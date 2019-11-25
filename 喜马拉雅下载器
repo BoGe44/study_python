@@ -1,0 +1,75 @@
+#1.播放音频，在network的media中查找到m4a地址
+#2.根据m4a地址中的字符串，在All中搜索，可得到获得音频连接的api页面
+#  https://www.ximalaya.com/revision/play/v1/audio?id=45982332&ptype=1
+#3.通过观察获得歌曲id通过此链接可以获得一个json返回，json返回中就包含media中歌曲链接的地址
+#4.形成思路： 
+#   页面上获取歌曲id，放入api链接中获得json
+#   json中获得链接地址，用requests.get获得内容
+#   使用.content方法和open操作写入文件
+#
+# pyinstaller -h来查看参数
+# -F打包成一个exe文件
+# -i图标路径
+# -w使用视窗，无控制台
+# -c使用控制台，无视窗
+# -D创建一个目录，包含exe以及其他一些依赖性文件
+# 编译文件时，我们通常使用如下命令：
+# pyinstaller -F -w -i favo.ico main.py
+#pyinstaller -F -w -i 84.ico xmly-windows.py
+
+
+import requests
+import tkinter as tk
+import tkinter.messagebox
+from bs4 import BeautifulSoup
+
+headers={
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36'
+}
+
+window = tk.Tk()
+window.title('喜马拉雅_宕')
+window.geometry('400x100') 
+lable_warning=tk.Label(window,text='本程序仅供技术研究使用，请勿使用于任何商业用途，否则后果自负！！！')
+lable_warning.pack()
+L1 = tk.Label(window, text="请粘贴入想下载内容的网页地址")
+L1.pack()  
+e2 = tk.Entry(window, show=None, font=('Arial', 14))
+e2.pack()
+
+
+def get_user_id(): #根据链接获得id
+    text=e2.get()
+    text=str(text).split('/')
+    music_id=text[-1]
+    return music_id
+
+def get_user_name():#根据链接获得网页中h1标签中的名字
+    music_page_url=e2.get()
+    res=requests.get(music_page_url,headers=headers)
+    # res.encoding=res.encoding.apparent_encoding
+    soup=BeautifulSoup(res.text,'html.parser')
+    name=soup.find('h1').text
+    return name
+
+def download_start():
+
+    music_id=get_user_id()
+    music_name=get_user_name()
+    api_url='https://www.ximalaya.com/revision/play/v1/audio?id='+music_id+'&ptype=1'
+    get_music_url=requests.get(api_url,headers=headers)
+    url_response=get_music_url.json()
+    music_url=url_response['data']['src']
+    response=requests.get(music_url,headers=headers)
+    music=response.content
+    with open(music_name+'.mp3','wb') as f:
+        f.write(music)
+    tk.messagebox.showinfo(title='Done！', message='完成！\n请在当前文件夹下查找下载的文件！')
+    
+
+b = tk.Button(window, text='下载', font=('Arial', 12), width=10, height=1,command=download_start)
+b.pack()
+
+
+window.mainloop()
+
